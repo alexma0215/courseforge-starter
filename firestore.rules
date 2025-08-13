@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(ownerId) { return isSignedIn() && request.auth.uid == ownerId; }
+
+    match /users/{uid} { allow read, write: if isOwner(uid); }
+
+    match /courses/{courseId} {
+      allow read: if resource.data.status == 'published' || isOwner(resource.data.ownerId);
+      allow create: if isSignedIn();
+      allow update, delete: if isOwner(resource.data.ownerId);
+    }
+
+    match /courses/{courseId}/lessons/{lessonId} {
+      allow read: if get(/databases/$(database)/documents/courses/$(courseId)).data.status == 'published' ||
+                    isOwner(get(/databases/$(database)/documents/courses/$(courseId)).data.ownerId);
+      allow write: if isOwner(get(/databases/$(database)/documents/courses/$(courseId)).data.ownerId);
+    }
+
+    match /shares/{publicId} {
+      allow read: if resource.data.enabled == true;
+      allow write: if isSignedIn();
+    }
+
+    match /billing/{uid} { allow read, write: if isOwner(uid); }
+  }
+}

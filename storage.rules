@@ -1,0 +1,7 @@
+rules_version = '2';
+service firebase.storage { match /b/{bucket}/o {
+  function isSignedIn() { return request.auth != null; }
+  function isOwner(uid) { return isSignedIn() && request.auth.uid == uid; }
+  match /courses/{courseId}/assets/{file} { allow read: if true; allow write: if isSignedIn(); }
+  match /users/{uid}/{allPaths=**} { allow read, write: if isOwner(uid); }
+}}
